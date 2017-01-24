@@ -107,6 +107,13 @@ def is_thanks(message):
             split_message[1].lower() == 'thanks')
 
 
+def is_help(message):
+    split_message = message["text"].split()
+    return (split_message and len(split_message) >= 2 and
+            is_valid_identifier(split_message[0]) and
+            split_message[1].lower() == 'help')
+
+
 def main():
     sc = SlackClient(SLACK_TOKEN)
     rt = RecognitionTracker()
@@ -125,6 +132,9 @@ def main():
                         message_to_write = rt.give_thanks(message['text'],
                                                           message['user'],
                                                           channel)
+
+                    if is_help(message):
+                        message_to_write = rt.get_help(channel)
 
                 if message_to_write:
                     sc.api_call("chat.postMessage", channel=channel,
