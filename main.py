@@ -1,6 +1,8 @@
 # Welcome to the Recognition Rabbit. The code here is pretty embarrassing :)
+import boto3
 from collections import OrderedDict
 import datetime
+import os
 import pickle
 import re
 from slackclient import SlackClient
@@ -8,6 +10,7 @@ import time
 
 
 SLACK_TOKEN = 'your-slack-token'
+BUCKET_NAME = "recognition-bot"
 NOT_A_DB_FILE = 'why_am_i_not_using_a_database.pkl'
 
 # Map between the channel the bot lives in and a triple of the form:
@@ -27,12 +30,31 @@ VALID_IDENTIFIERS = ["rabbit", "recognitionrabbit", "karma"]
 class RecognitionTracker(object):
     def __init__(self):
         try:
+            if not os.path.exists(NOT_A_DB_FILE):
+                self.download_file_from_s3()
+
             self.thanks = pickle.load(open(NOT_A_DB_FILE, 'rb'))
         except:
             self.thanks = {}
+            self.upload_file_to_s3()
 
         self.current_date = (datetime.datetime.now() -
                              datetime.timedelta(hours=17)).date()
+
+    # Why S3 you might ask? Well, allow me to begin.... The story begins with
+    # a naive version of myself wanting to build a cool new bot. But, you see,
+    # the true me is also a victim of "laziness". Thus, pickled files. But,
+    # I also wanted to use heroku. Thus, ephemeral storage. For some reason,
+    # I ended up sending things off to S3 instead of building a proper
+    # database. This was, of course, a terrible choice. But, you know.....
+    def download_file_from_s3(self):
+        s3 = boto3.client('s3')
+        s3.download_file(BUCKET_NAME, NOT_A_DB_FILE, NOT_A_DB_FILE)
+
+    def upload_file_to_s3(self):
+        s3 = boto3.client('s3')
+        pickle.dump(self.thanks, open(NOT_A_DB_FILE, 'wb'))
+        s3.upload_file(NOT_A_DB_FILE, BUCKET_NAME, NOT_A_DB_FILE)
 
     def generate_thanks(self, awarder, awardee, award_text):
         return [{
@@ -60,6 +82,11 @@ class RecognitionTracker(object):
             award_text = award_text.encode('ascii', 'ignore')
             self.thanks[channel][self.current_date][awardee].append(
                 award_text)
+
+            try:
+                self.upload_file_to_s3()
+            except:
+                pass
 
             return self.generate_thanks(awarder, awardee, award_text)
 
