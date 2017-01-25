@@ -184,6 +184,8 @@ def main():
         while True:
             messages = sc.rtm_read()
             for message in messages:
+                message_to_write = None
+
                 # It only watches the channels it's in, but to be extra
                 # careful here.
                 channel = message.get("channel")
