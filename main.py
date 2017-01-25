@@ -90,6 +90,22 @@ class RecognitionTracker(object):
 
             return self.generate_thanks(awarder, awardee, award_text)
 
+    def get_daily(self, channel, override=False):
+        today_entries = [{
+            "pretext": ("Check out all the awesome things folks have" +
+                        " done in the past day:"),
+        }]
+        for name, messages in self.thanks.get(channel, {}).get(
+                self.current_date, {}).iteritems():
+            for message in messages:
+                today_entries.append({
+                    "color": "good",
+                    "mrkdwn_in": ["text"],
+                    "text": "*" + str(name) + "*: " + str(message)
+                })
+
+        return today_entries if len(today_entries) > 1 or override else None
+
 
 def is_valid_message(message):
     return (message.get("type") == "message" and
@@ -105,6 +121,13 @@ def is_thanks(message):
     return (split_message and len(split_message) >= 4 and
             is_valid_identifier(split_message[0]) and
             split_message[1].lower() == 'thanks')
+
+
+def is_today(message):
+    split_message = message["text"].split()
+    return (split_message and len(split_message) >= 2 and
+            is_valid_identifier(split_message[0]) and
+            split_message[1].lower() == 'today')
 
 
 def is_help(message):
@@ -135,6 +158,10 @@ def main():
 
                     if is_help(message):
                         message_to_write = rt.get_help(channel)
+
+                    if is_today(message):
+                        message_to_write = rt.get_daily(channel,
+                                                        override=True)
 
                 if message_to_write:
                     sc.api_call("chat.postMessage", channel=channel,
