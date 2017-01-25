@@ -13,22 +13,29 @@ SLACK_TOKEN = 'your-slack-token'
 BUCKET_NAME = "recognition-bot"
 NOT_A_DB_FILE = 'why_am_i_not_using_a_database.pkl'
 
-# Map between the channel the bot lives in and a triple of the form:
-# ("Preferred Bot Username", ":preferred-emoji:", "Preferred Bot Identifier")
+# Map between a channel that the bot lives in, and configuration info for
+# that channel. This includes the bot's name, the preferred emoji, and the
+# preferred identifier for issuing bot commands. There are also optional
+# alternate identifiers (e.g. if you want the bot to respond to both
+# "trex" and "tyrannsaurus"). These identifiers are case-sensitive and strip
+# dashes (e.g. "T-rex" will trigger the bot for the identifier "trex").
 # There is no limit on the number of channels this can operate in. Each
 # channel will have its own tracking (e.g. a message in one channel won't be
-# recorded in any other channels). This is true even if channels use the same
-# name / emoji / identifier.
+# recorded in any other channels).
 CHANNEL_INFO = {
-    'CXXXXXXX1': ("Recognition Rabbit", ":rabbit:", "rabbit"),
-    'CXXXXXXX2': ("Karma Chameleon", ":chameleon:", "karma")
+    'CXXXXXXX1': {
+        'name': "Recognition Rabbit",
+        'emoji': ":rabbit:",
+        'identifier': "rabbit",
+        'alt_identifiers': []
+    },
+    'CXXXXXXX2': {
+        'name': "Karma Chameleon",
+        'emoji': ":chameleon:",
+        'identifier': "karma",
+        'alt_identifiers': []
+    }
 }
-
-# A list of names that the bot responds to for triggering commands.
-# These will be case-sensitive and strip dashes (e.g. "T-rex" will trigger
-# the bot along with "trex"). All of these identifiers work in every channel.
-VALID_IDENTIFIERS = ["rabbit", "recognitionrabbit", "karma"]
-
 
 # There isn't even a reason for this to be a class.
 class RecognitionTracker(object):
@@ -131,16 +138,16 @@ class RecognitionTracker(object):
 
     def get_help(self, channel):
         return [{
-            "pretext": "Welcome to " + CHANNEL_INFO[channel][0] + "!",
+            "pretext": "Welcome to " + CHANNEL_INFO[channel]['name'] + "!",
             "color": "good",
             "mrkdwn_in": ["text"],
             "text": ("*To thank someone for their awesomeness:* `" +
-                     CHANNEL_INFO[channel][2] +
+                     CHANNEL_INFO[channel]['identifier'] +
                      " thanks <their_name> <the awesome thing they did>`" +
                      "\n*To see a summary of our collective awesomeness" +
-                     ":* `" + CHANNEL_INFO[channel][2] + " summary`"
+                     ":* `" + CHANNEL_INFO[channel]['identifier'] + " summary`"
                      "\n*To view today's awesomeness" +
-                     ":* `" + CHANNEL_INFO[channel][2] + " today`")
+                     ":* `" + CHANNEL_INFO[channel]['identifier'] + " today`")
         }]
 
 
@@ -149,35 +156,39 @@ def is_valid_message(message):
             message.get("text"))
 
 
-def is_valid_identifier(identifier):
-    return re.sub('[@|-]', '', identifier).lower() in VALID_IDENTIFIERS
+def is_valid_identifier(identifier, message):
+    channel = message["channel"]
+    valid_identifiers = (CHANNEL_INFO[channel]['alt_identifiers'] +
+                         [CHANNEL_INFO[channel]['identifier']])
+
+    return re.sub('[@|-]', '', identifier).lower() in valid_identifiers
 
 
 def is_thanks(message):
     split_message = message["text"].split()
     return (split_message and len(split_message) >= 4 and
-            is_valid_identifier(split_message[0]) and
+            is_valid_identifier(split_message[0], message) and
             split_message[1].lower() == 'thanks')
 
 
 def is_summarize(message):
     split_message = message["text"].split()
     return (split_message and len(split_message) >= 2 and
-            is_valid_identifier(split_message[0]) and
+            is_valid_identifier(split_message[0], message) and
             split_message[1].lower() == 'summary')
 
 
 def is_today(message):
     split_message = message["text"].split()
     return (split_message and len(split_message) >= 2 and
-            is_valid_identifier(split_message[0]) and
+            is_valid_identifier(split_message[0], message) and
             split_message[1].lower() == 'today')
 
 
 def is_help(message):
     split_message = message["text"].split()
     return (split_message and len(split_message) >= 2 and
-            is_valid_identifier(split_message[0]) and
+            is_valid_identifier(split_message[0], message) and
             split_message[1].lower() == 'help')
 
 
@@ -208,8 +219,8 @@ def main():
                             sc.api_call(
                                 "chat.postMessage",
                                 channel=channel_key,
-                                username=CHANNEL_INFO[channel_key][0],
-                                icon_emoji=CHANNEL_INFO[channel_key][1],
+                                username=CHANNEL_INFO[channel_key]['name'],
+                                icon_emoji=CHANNEL_INFO[channel_key]['emoji'],
                                 attachments=possible_message_to_write
                             )
 
@@ -233,8 +244,8 @@ def main():
 
                 if message_to_write:
                     sc.api_call("chat.postMessage", channel=channel,
-                                username=CHANNEL_INFO[channel][0],
-                                icon_emoji=CHANNEL_INFO[channel][1],
+                                username=CHANNEL_INFO[channel]['name'],
+                                icon_emoji=CHANNEL_INFO[channel]['emoji'],
                                 attachments=message_to_write)
 
                 time.sleep(1)
