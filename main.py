@@ -90,6 +90,25 @@ class RecognitionTracker(object):
 
             return self.generate_thanks(awarder, awardee, award_text)
 
+    def get_summary(self, channel):
+        map_most_recent_entries = {}
+        for current_date, day_info in self.thanks.get(channel, {}).iteritems():
+            for name, messages in day_info.iteritems():
+                map_most_recent_entries[name] = messages[-1]
+
+        most_recent_entries = [{
+            "pretext": ("Check out the collective awesomeness of everyone "
+                        " on the team:"),
+        }]
+        for name, message in map_most_recent_entries.iteritems():
+            most_recent_entries.append({
+                "color": "good",
+                "mrkdwn_in": ["text"],
+                "text": "*" + str(name) + "*: " + str(message)
+            })
+
+        return most_recent_entries
+
     def get_daily(self, channel, override=False):
         today_entries = [{
             "pretext": ("Check out all the awesome things folks have" +
@@ -137,6 +156,13 @@ def is_thanks(message):
             split_message[1].lower() == 'thanks')
 
 
+def is_summarize(message):
+    split_message = message["text"].split()
+    return (split_message and len(split_message) >= 2 and
+            is_valid_identifier(split_message[0]) and
+            split_message[1].lower() == 'summary')
+
+
 def is_today(message):
     split_message = message["text"].split()
     return (split_message and len(split_message) >= 2 and
@@ -169,6 +195,9 @@ def main():
                         message_to_write = rt.give_thanks(message['text'],
                                                           message['user'],
                                                           channel)
+
+                    if is_summarize(message):
+                        message_to_write = rt.get_summary(channel)
 
                     if is_help(message):
                         message_to_write = rt.get_help(channel)
