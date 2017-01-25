@@ -106,6 +106,20 @@ class RecognitionTracker(object):
 
         return today_entries if len(today_entries) > 1 or override else None
 
+    def get_help(self, channel):
+        return [{
+            "pretext": "Welcome to " + CHANNEL_INFO[channel][0] + "!",
+            "color": "good",
+            "mrkdwn_in": ["text"],
+            "text": ("*To thank someone for their awesomeness:* `" +
+                     CHANNEL_INFO[channel][2] +
+                     " thanks <their_name> <the awesome thing they did>`" +
+                     "\n*To see a summary of our collective awesomeness" +
+                     ":* `" + CHANNEL_INFO[channel][2] + " summary`"
+                     "\n*To view today's awesomeness" +
+                     ":* `" + CHANNEL_INFO[channel][2] + " today`")
+        }]
+
 
 def is_valid_message(message):
     return (message.get("type") == "message" and
