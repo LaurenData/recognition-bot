@@ -15,6 +15,10 @@ NOT_A_DB_FILE = 'why_am_i_not_using_a_database.pkl'
 
 # Map between the channel the bot lives in and a triple of the form:
 # ("Preferred Bot Username", ":preferred-emoji:", "Preferred Bot Identifier")
+# There is no limit on the number of channels this can operate in. Each
+# channel will have its own tracking (e.g. a message in one channel won't be
+# recorded in any other channels). This is true even if channels use the same
+# name / emoji / identifier.
 CHANNEL_INFO = {
     'CXXXXXXX1': ("Recognition Rabbit", ":rabbit:", "rabbit"),
     'CXXXXXXX2': ("Karma Chameleon", ":chameleon:", "karma")
@@ -22,7 +26,7 @@ CHANNEL_INFO = {
 
 # A list of names that the bot responds to for triggering commands.
 # These will be case-sensitive and strip dashes (e.g. "T-rex" will trigger
-# the bot along with "trex").
+# the bot along with "trex"). All of these identifiers work in every channel.
 VALID_IDENTIFIERS = ["rabbit", "recognitionrabbit", "karma"]
 
 
