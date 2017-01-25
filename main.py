@@ -190,6 +190,25 @@ def main():
                 if not channel or channel not in CHANNEL_INFO.keys():
                     continue
 
+                # The first time you get here after 10AM on a new day, print
+                # out some random results.
+                current_date = (datetime.datetime.now() -
+                                datetime.timedelta(hours=17)).date()
+                if current_date != rt.current_date:
+                    # Write the daily message to every channel
+                    for channel_key in CHANNEL_INFO.iterkeys():
+                        possible_message_to_write = rt.get_daily(channel_key)
+                        if possible_message_to_write:
+                            sc.api_call(
+                                "chat.postMessage",
+                                channel=channel_key,
+                                username=CHANNEL_INFO[channel_key][0],
+                                icon_emoji=CHANNEL_INFO[channel_key][1],
+                                attachments=possible_message_to_write
+                            )
+
+                    rt.current_date = current_date
+
                 if is_valid_message(message):
                     if is_thanks(message):
                         message_to_write = rt.give_thanks(message['text'],
