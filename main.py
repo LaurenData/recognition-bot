@@ -37,6 +37,7 @@ CHANNEL_INFO = {
     }
 }
 
+
 # There isn't even a reason for this to be a class.
 class RecognitionTracker(object):
     def __init__(self):
@@ -151,45 +152,27 @@ class RecognitionTracker(object):
         }]
 
 
-def is_valid_message(message):
-    return (message.get("type") == "message" and
-            message.get("text"))
+def get_command_type(message):
+    # Validate that the message is a valid message.
+    if not (message.get("type") == "message" and message.get("text")):
+        return None
 
+    # Bot-related messages are in the format:
+    # "<bot-identifier> <bot-command> ....."
+    split_message = message["text"].split()
+    if not split_message or len(split_message) < 2:
+        return None
 
-def is_valid_identifier(identifier, message):
+    # Validate the bot identifier:
+    identifier = split_message[0]
     channel = message["channel"]
     valid_identifiers = (CHANNEL_INFO[channel]['alt_identifiers'] +
                          [CHANNEL_INFO[channel]['identifier']])
+    if re.sub('[@|-]', '', identifier).lower() not in valid_identifiers:
+        return None
 
-    return re.sub('[@|-]', '', identifier).lower() in valid_identifiers
-
-
-def is_thanks(message):
-    split_message = message["text"].split()
-    return (split_message and len(split_message) >= 4 and
-            is_valid_identifier(split_message[0], message) and
-            split_message[1].lower() == 'thanks')
-
-
-def is_summarize(message):
-    split_message = message["text"].split()
-    return (split_message and len(split_message) >= 2 and
-            is_valid_identifier(split_message[0], message) and
-            split_message[1].lower() == 'summary')
-
-
-def is_today(message):
-    split_message = message["text"].split()
-    return (split_message and len(split_message) >= 2 and
-            is_valid_identifier(split_message[0], message) and
-            split_message[1].lower() == 'today')
-
-
-def is_help(message):
-    split_message = message["text"].split()
-    return (split_message and len(split_message) >= 2 and
-            is_valid_identifier(split_message[0], message) and
-            split_message[1].lower() == 'help')
+    # Return the bot command:
+    return split_message[1].lower()
 
 
 def main():
@@ -226,21 +209,21 @@ def main():
 
                     rt.current_date = current_date
 
-                if is_valid_message(message):
-                    if is_thanks(message):
-                        message_to_write = rt.give_thanks(message['text'],
-                                                          message['user'],
-                                                          channel)
+                command_type = get_command_type(message)
+                if command_type == "thanks":
+                    message_to_write = rt.give_thanks(message['text'],
+                                                      message['user'],
+                                                      channel)
 
-                    if is_summarize(message):
-                        message_to_write = rt.get_summary(channel)
+                elif command_type == "summary":
+                    message_to_write = rt.get_summary(channel)
 
-                    if is_help(message):
-                        message_to_write = rt.get_help(channel)
+                elif command_type == "help":
+                    message_to_write = rt.get_help(channel)
 
-                    if is_today(message):
-                        message_to_write = rt.get_daily(channel,
-                                                        override=True)
+                elif command_type == "today":
+                    message_to_write = rt.get_daily(channel,
+                                                    override=True)
 
                 if message_to_write:
                     sc.api_call("chat.postMessage", channel=channel,
